@@ -1,6 +1,9 @@
 package sample;
 
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.application.Application;
+import javafx.scene.Cursor;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -11,10 +14,12 @@ import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.ArcType;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -71,6 +76,10 @@ public class Main extends Application {
         plotButton.setLayoutX((scene.getWidth()-plotButton.getWidth())/2);
         plotButton.setLayoutY(700);
         plotButton.setOnAction(event -> {
+            final int[] selectedPartIndex = {-1};
+            final double[] selectedPartAngle = new double[1];
+            final double[] selectedPartExtent = new double[1];
+            Color[] colours = {Color.RED, Color.MEDIUMSLATEBLUE, Color.BLUEVIOLET, Color.DARKKHAKI, Color.INDIANRED};
             total[0] = 0;
             for (TextField current : partsList) {
                 String value = current.getText();
@@ -101,29 +110,44 @@ public class Main extends Application {
 
             chartRoot.getChildren().addAll(chartBackground, chartCanvas);
 
-            gr.clearRect(0, 0, chartCanvas.getWidth(), chartCanvas.getHeight());
-            gr.setFill(Color.PAPAYAWHIP);
-            gr.fillRect(0,0, chartCanvas.getWidth(), chartCanvas.getHeight());
+            //draw(chartCanvas, gr, percentages, colours, selectedPartIndex[0]);
+            gr.fillArc(47, 45, 206, 210, 90, 30, ArcType.ROUND);
+            gr.setFill(Color.RED);
+            gr.fillArc(50, 50, 200, 200, 90, 30, ArcType.ROUND);
 
-            double angle = 90;
+            Timeline chartAnimationGrow = new Timeline(new KeyFrame(Duration.millis(40), event1 -> {
+                //draw(chartCanvas, gr, percentages, colours, selectedPartIndex);
+                //gr.fillArc(50, 50, 200, 200, angle, tempAngle, ArcType.ROUND);
+            }));
 
-            for (Double percentage : percentages) {
-                double startingX = 150 + 5 * Math.cos(angle),
-                        startingY = 150 + 5 * Math.sin(angle);
+            Timeline chartAnimationDecrease = new Timeline(new KeyFrame(Duration.millis(40), event1 -> {
+                //draw(chartCanvas, gr, percentages, colours, selectedPartIndex);
+                //gr.fillArc(50, 50, 200, 200, angle, tempAngle, ArcType.ROUND);
+            }));
 
-                //System.out.println(startingX + ", " + startingY);
-
-                gr.beginPath();
-                gr.moveTo(startingX, startingY);
-                double tempAngle = percentage * 360;
-                System.out.println(tempAngle);
-                gr.arc(startingX, startingY, 95, 95, angle, Math.toDegrees(tempAngle) * 95);
-                System.out.println(angle + ", " + Math.toRadians(tempAngle) * 95);
-                gr.lineTo(startingX, startingY);
-                gr.stroke();
-                angle -= tempAngle;
-                //TODO choose whether I want to have angles in degrees or radians(canvas uses degrees, Math library radians)
-            }
+            chartCanvas.setOnMouseMoved(event1 -> {
+                if((event1.getX()-150)*(event1.getX()-150)+(event1.getY()-150)*(event1.getY()-150)<100*100){
+                    double tempAngle = Math.atan(-(event1.getY()-150)/ (event1.getX()-150)), totalPercentages=0;
+                    if(event1.getX()<150) tempAngle+=Math.PI;
+                    tempAngle= tempAngle*180/Math.PI-90;
+                    if(tempAngle<0) tempAngle+=360;
+                    boolean animation = false;
+                    for (int i = 0; i<percentages.size(); i++) {
+                        if (tempAngle > (totalPercentages * 360 + 1) % 360
+                                && tempAngle < ((totalPercentages+percentages.get(i)) * 360 - 1) % 360) {
+                            selectedPartIndex[0] = i;
+                            selectedPartAngle[0] = (totalPercentages*360+1) % 360;
+                            selectedPartExtent[0] = (percentages.get(i)*360);
+                            animation=true;
+                            break;
+                        }
+                        totalPercentages+=percentages.get(i);
+                    }
+                    if(animation) chartRoot.setCursor(Cursor.HAND);
+                    else chartRoot.setCursor(Cursor.DEFAULT);
+                }
+                else chartRoot.setCursor(Cursor.DEFAULT);
+            });
 
             Stage chartStage = new Stage();
             chartStage.setScene(chartScene);
@@ -135,6 +159,36 @@ public class Main extends Application {
         Stage stage = new Stage();
         stage.setScene(scene);
         stage.show();
+    }
+
+    public static void draw(Canvas chartCanvas, GraphicsContext gr, List<Double> percentages,
+                            Color[] colours, int selectedPartIndex){
+        gr.clearRect(0, 0, chartCanvas.getWidth(), chartCanvas.getHeight());
+        gr.setFill(Color.PAPAYAWHIP);
+        gr.fillRect(0,0, chartCanvas.getWidth(), chartCanvas.getHeight());
+
+        double angle = 90;
+
+        for (int i = 0; i< percentages.size(); i++) {
+            gr.setFill(colours[i]);
+            gr.beginPath();
+            double tempAngle = percentages.get(i) * 360;
+            if(selectedPartIndex!=i) gr.fillArc(50, 50, 200, 200, angle, tempAngle, ArcType.ROUND);
+            angle += tempAngle;
+        }
+
+        angle=Math.PI/2;
+
+        for(Double percentage : percentages){
+            gr.setStroke(Color.PAPAYAWHIP);
+            gr.setLineWidth(3);
+            gr.beginPath();
+            gr.moveTo(150, 150);
+            gr.lineTo(150+100*Math.cos(angle), 150-100*Math.sin(angle));
+            gr.stroke();
+            double tempAngle = percentage * 2*Math.PI;
+            angle +=tempAngle;
+        }
     }
 
 
