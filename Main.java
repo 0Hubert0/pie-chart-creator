@@ -3,6 +3,7 @@ package sample;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Application;
+import javafx.geometry.Pos;
 import javafx.scene.Cursor;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
@@ -55,6 +56,7 @@ public class Main extends Application {
         parts.setContent(content);
 
         HBox addHBox = new HBox();
+        addHBox.setAlignment(Pos.CENTER);
         content.getChildren().add(addHBox);
 
         Button addButton = new Button("add");
@@ -76,6 +78,8 @@ public class Main extends Application {
         plotButton.setLayoutX((scene.getWidth()-plotButton.getWidth())/2);
         plotButton.setLayoutY(700);
         plotButton.setOnAction(event -> {
+            final boolean[] decreasePlay = {false};
+            final int[] cycleCounter = {0};
             final int[] selectedPartIndex = {-1};
             final double[] selectedPartAngle = new double[1];
             final double[] selectedPartExtent = new double[1];
@@ -110,20 +114,27 @@ public class Main extends Application {
 
             chartRoot.getChildren().addAll(chartBackground, chartCanvas);
 
-            //draw(chartCanvas, gr, percentages, colours, selectedPartIndex[0]);
-            gr.fillArc(47, 45, 206, 210, 90, 30, ArcType.ROUND);
-            gr.setFill(Color.RED);
-            gr.fillArc(50, 50, 200, 200, 90, 30, ArcType.ROUND);
+            draw(chartCanvas, gr, percentages, colours, selectedPartIndex[0]);
 
-            Timeline chartAnimationGrow = new Timeline(new KeyFrame(Duration.millis(40), event1 -> {
-                //draw(chartCanvas, gr, percentages, colours, selectedPartIndex);
-                //gr.fillArc(50, 50, 200, 200, angle, tempAngle, ArcType.ROUND);
+            Timeline chartAnimationGrow = new Timeline(new KeyFrame(Duration.millis(10), event1 -> {
+                drawCorrected(percentages, cycleCounter, selectedPartIndex, selectedPartAngle,
+                        selectedPartExtent, colours, chartCanvas, gr);
+                cycleCounter[0]++;
+                decreasePlay[0] = true;
+                if(cycleCounter[0] > 9) cycleCounter[0] = 9;
             }));
 
-            Timeline chartAnimationDecrease = new Timeline(new KeyFrame(Duration.millis(40), event1 -> {
-                //draw(chartCanvas, gr, percentages, colours, selectedPartIndex);
-                //gr.fillArc(50, 50, 200, 200, angle, tempAngle, ArcType.ROUND);
+            chartAnimationGrow.setCycleCount(10);
+
+            Timeline chartAnimationDecrease = new Timeline(new KeyFrame(Duration.millis(10), event1 -> {
+                drawCorrected(percentages, cycleCounter, selectedPartIndex, selectedPartAngle,
+                        selectedPartExtent, colours, chartCanvas, gr);
+                cycleCounter[0]--;
+                if(cycleCounter[0] == 0) decreasePlay[0] = false;
+                if(cycleCounter[0] < 0) cycleCounter[0] = 0;
             }));
+
+            chartAnimationDecrease.setCycleCount(10);
 
             chartCanvas.setOnMouseMoved(event1 -> {
                 if((event1.getX()-150)*(event1.getX()-150)+(event1.getY()-150)*(event1.getY()-150)<100*100){
@@ -136,17 +147,28 @@ public class Main extends Application {
                         if (tempAngle > (totalPercentages * 360 + 1) % 360
                                 && tempAngle < ((totalPercentages+percentages.get(i)) * 360 - 1) % 360) {
                             selectedPartIndex[0] = i;
-                            selectedPartAngle[0] = (totalPercentages*360+1) % 360;
+                            selectedPartAngle[0] = (totalPercentages*360) % 360;
                             selectedPartExtent[0] = (percentages.get(i)*360);
                             animation=true;
                             break;
                         }
                         totalPercentages+=percentages.get(i);
                     }
-                    if(animation) chartRoot.setCursor(Cursor.HAND);
-                    else chartRoot.setCursor(Cursor.DEFAULT);
+                    if(animation) {
+                        chartRoot.setCursor(Cursor.HAND);
+                        chartAnimationGrow.play();
+                    }
+                    else {
+                        chartRoot.setCursor(Cursor.DEFAULT);
+                        chartAnimationGrow.pause();
+                        if (decreasePlay[0]) chartAnimationDecrease.play();
+                    }
                 }
-                else chartRoot.setCursor(Cursor.DEFAULT);
+                else {
+                    chartRoot.setCursor(Cursor.DEFAULT);
+                    chartAnimationGrow.pause();
+                    if (decreasePlay[0]) chartAnimationDecrease.play();
+                }
             });
 
             Stage chartStage = new Stage();
@@ -159,6 +181,16 @@ public class Main extends Application {
         Stage stage = new Stage();
         stage.setScene(scene);
         stage.show();
+    }
+
+    public void drawCorrected(List<Double> percentages, int[] cycleCounter, int[] selectedPartIndex,
+                              double[] selectedPartAngle, double[] selectedPartExtent, Color[] colours,
+                              Canvas chartCanvas, GraphicsContext gr) {
+        draw(chartCanvas, gr, percentages, colours, selectedPartIndex[0]);
+        gr.setFill(colours[selectedPartIndex[0]]);
+        gr.fillArc(50- cycleCounter[0], 50- cycleCounter[0], 200+2* cycleCounter[0],
+                200+2* cycleCounter[0], selectedPartAngle[0] + 90,
+                selectedPartExtent[0], ArcType.ROUND);
     }
 
     public static void draw(Canvas chartCanvas, GraphicsContext gr, List<Double> percentages,
@@ -181,7 +213,7 @@ public class Main extends Application {
 
         for(Double percentage : percentages){
             gr.setStroke(Color.PAPAYAWHIP);
-            gr.setLineWidth(3);
+            gr.setLineWidth(2);
             gr.beginPath();
             gr.moveTo(150, 150);
             gr.lineTo(150+100*Math.cos(angle), 150-100*Math.sin(angle));
