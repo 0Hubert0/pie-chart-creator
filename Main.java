@@ -11,8 +11,10 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
+import javafx.scene.input.KeyCode;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.ArcType;
@@ -29,10 +31,8 @@ public class Main extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception{
-        final double[] total = {0};
+        final HBox[] chosen = {null};
         List <TextField> partsList = new ArrayList<>();
-        List <Double> values = new ArrayList<>();
-        List <Double> percentages = new ArrayList<>();
 
         AnchorPane root = new AnchorPane();
 
@@ -47,7 +47,7 @@ public class Main extends Application {
         title.setLayoutY(100);
 
         ScrollPane parts = new ScrollPane();
-        parts.setMinWidth(200);
+        parts.setMinWidth(202);
         parts.setLayoutX(scene.getWidth()/2-100);
         parts.setLayoutY(300);
         parts.setMaxHeight(200);
@@ -56,21 +56,51 @@ public class Main extends Application {
         parts.setContent(content);
 
         HBox addHBox = new HBox();
-        addHBox.setAlignment(Pos.CENTER);
+        addHBox.setMinWidth(244);
         content.getChildren().add(addHBox);
 
         Button addButton = new Button("add");
-        addButton.setLayoutX((addHBox.getWidth()-addButton.getWidth())/2);
         addHBox.getChildren().add(addButton);
+        addHBox.setAlignment(Pos.CENTER);
         addButton.setOnAction(event -> {
             HBox hBox1 = new HBox();
+            StackPane textStack = new StackPane();
+            Text numberAdded = new Text();
+            numberAdded.setVisible(false);
             TextField partTextField = new TextField();
+            chosen[0] = hBox1;
+            partTextField.setOnMouseClicked(event1 -> {
+                chosen[0] = hBox1;
+            });
+            textStack.getChildren().addAll(numberAdded, partTextField);
+            StackPane stack = new StackPane();
+            stack.setOnMouseEntered(event1 -> stack.setCursor(Cursor.HAND));
+            stack.setOnMouseExited(event1 -> stack.setCursor(Cursor.HAND));
+            Text back = new Text("back");
+            back.setVisible(false);
             Button insertButton = new Button("insert");
             insertButton.setOnAction(event1 -> {
+                numberAdded.setText(partTextField.getText());
+                numberAdded.setVisible(true);
+                partTextField.setVisible(false);
                 partsList.add(partTextField);
+                back.setVisible(true);
+                insertButton.setVisible(false);
             });
-            addHBox.setLayoutY(addHBox.getLayoutY()+100);
-            hBox1.getChildren().addAll(partTextField, insertButton);
+            back.setOnMouseClicked(event1 -> {
+                for (int i = 0; i < partsList.size(); i++) {
+                    if(partsList.get(i)==partTextField) {
+                        partsList.remove(partTextField);
+                        break;
+                    }
+                }
+                back.setVisible(false);
+                insertButton.setVisible(true);
+                numberAdded.setVisible(false);
+                partTextField.setVisible(true);
+            });
+            stack.getChildren().addAll(back, insertButton);
+            hBox1.getChildren().addAll(textStack, stack);
             content.getChildren().add(hBox1);
         });
 
@@ -78,18 +108,21 @@ public class Main extends Application {
         plotButton.setLayoutX((scene.getWidth()-plotButton.getWidth())/2);
         plotButton.setLayoutY(700);
         plotButton.setOnAction(event -> {
+            List <Double> values = new ArrayList<>();
+            List <Double> percentages = new ArrayList<>();
             final boolean[] decreasePlay = {false};
             final int[] cycleCounter = {0};
             final int[] selectedPartIndex = {-1};
             final double[] selectedPartAngle = new double[1];
             final double[] selectedPartExtent = new double[1];
+            double total = 0;
             Color[] colours = {Color.RED, Color.MEDIUMSLATEBLUE, Color.BLUEVIOLET, Color.DARKKHAKI, Color.INDIANRED};
-            total[0] = 0;
+
             for (TextField current : partsList) {
                 String value = current.getText();
                 try {
                     double numericalValue = Double.parseDouble(value);
-                    total[0] += numericalValue;
+                    total += numericalValue;
                     values.add(numericalValue);
                 } catch (Exception e) {
                     System.out.println("Wrong input");
@@ -97,7 +130,7 @@ public class Main extends Application {
             }
 
             for (Double value : values) {
-                percentages.add(value / total[0]);
+                percentages.add(value / total);
             }
 
             AnchorPane chartRoot = new AnchorPane();
@@ -176,6 +209,32 @@ public class Main extends Application {
             chartStage.show();
         });
 
+        scene.setOnKeyPressed(event -> {
+            if(event.getCode() == KeyCode.ENTER && chosen[0]!=null){
+                StackPane textStack = (StackPane) (chosen[0].getChildren().get(0));
+                Text numberAdded = (Text) textStack.getChildren().get(0);
+                TextField partTextField = (TextField) textStack.getChildren().get(1);
+
+                StackPane stack = (StackPane) (chosen[0].getChildren().get(1));
+                Text back = (Text) stack.getChildren().get(0);
+                Button insertButton = (Button) stack.getChildren().get(1);
+
+                numberAdded.setText(partTextField.getText());
+                numberAdded.setVisible(true);
+                partTextField.setVisible(false);
+                partsList.add(partTextField);
+                back.setVisible(true);
+                insertButton.setVisible(false);
+            }
+        });
+
+        //Timeline actualize = new Timeline(new KeyFrame(Duration.millis(10), event -> {
+        //    addHBox.setAlignment(Pos.CENTER);
+        //}));
+
+        //actualize.setCycleCount(-1);
+        //actualize.play();
+
         root.getChildren().addAll(background, title, parts, plotButton);
 
         Stage stage = new Stage();
@@ -194,7 +253,7 @@ public class Main extends Application {
     }
 
     public static void draw(Canvas chartCanvas, GraphicsContext gr, List<Double> percentages,
-                            Color[] colours, int selectedPartIndex){
+                            Color[] colours, int selectedPartIndex) {
         gr.clearRect(0, 0, chartCanvas.getWidth(), chartCanvas.getHeight());
         gr.setFill(Color.PAPAYAWHIP);
         gr.fillRect(0,0, chartCanvas.getWidth(), chartCanvas.getHeight());
@@ -222,7 +281,6 @@ public class Main extends Application {
             angle +=tempAngle;
         }
     }
-
 
     public static void main(String[] args) {
         launch(args);
