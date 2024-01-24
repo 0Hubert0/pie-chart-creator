@@ -12,15 +12,13 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
-import javafx.scene.layout.AnchorPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.ArcType;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
+import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
@@ -31,8 +29,10 @@ public class Main extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception{
+        final boolean[] increased = {false};
         final HBox[] chosen = {null};
         List <TextField> partsList = new ArrayList<>();
+        List <HBox> rows = new ArrayList<>();
 
         AnchorPane root = new AnchorPane();
 
@@ -42,15 +42,18 @@ public class Main extends Application {
         background.setFill(Color.DARKGRAY);
 
         Text title = new Text("Pie Chart Creator");
-        title.setFont(Font.font(25));
-        title.setLayoutX(scene.getWidth()/2);
+        title.setFont(Font.font("Comic Sans MS", 80));
+        title.setWrappingWidth(700);
+        title.setTextAlignment(TextAlignment.CENTER);
+        title.setLayoutX((scene.getWidth()-title.getWrappingWidth())/2);
         title.setLayoutY(100);
 
         ScrollPane parts = new ScrollPane();
+        parts.setStyle("-fx-background-color: rgb(169, 169, 169); -fx-background: rgb(169, 169, 169)");
         parts.setMinWidth(202);
-        parts.setLayoutX(scene.getWidth()/2-100);
+        parts.setLayoutX((scene.getWidth()-parts.getMinWidth())/2-51);
         parts.setLayoutY(300);
-        parts.setMaxHeight(200);
+        parts.setMaxHeight(400);
 
         VBox content = new VBox();
         parts.setContent(content);
@@ -60,6 +63,7 @@ public class Main extends Application {
         content.getChildren().add(addHBox);
 
         Button addButton = new Button("add");
+        addButton.setFont(Font.font(18));
         addHBox.getChildren().add(addButton);
         addHBox.setAlignment(Pos.CENTER);
         addButton.setOnAction(event -> {
@@ -102,11 +106,17 @@ public class Main extends Application {
             stack.getChildren().addAll(back, insertButton);
             hBox1.getChildren().addAll(textStack, stack);
             content.getChildren().add(hBox1);
+            if(content.getHeight()>360 && !increased[0]) {
+                increased[0] =true;
+                parts.setMinWidth(parts.getMinWidth()+62);
+            }
+            rows.add(hBox1);
         });
 
         Button plotButton = new Button("plot");
+        plotButton.setFont(Font.font(18));
         plotButton.setLayoutX((scene.getWidth()-plotButton.getWidth())/2);
-        plotButton.setLayoutY(700);
+        plotButton.setLayoutY(720);
         plotButton.setOnAction(event -> {
             List <Double> values = new ArrayList<>();
             List <Double> percentages = new ArrayList<>();
@@ -225,19 +235,48 @@ public class Main extends Application {
                 partsList.add(partTextField);
                 back.setVisible(true);
                 insertButton.setVisible(false);
+
+                int index = -1;
+
+                for (int i = 0; i < rows.size(); i++) {
+                    if (rows.get(i) == chosen[0]) {
+                        index = i;
+                        break;
+                    }
+                }
+
+                int tempIndex = index+1;
+                if(tempIndex>=rows.size()) tempIndex=0;
+                while(tempIndex!=index){
+
+                    StackPane tempStack = (StackPane) (rows.get(tempIndex).getChildren().get(0));
+                    Text tempText = (Text) tempStack.getChildren().get(0);
+                    if(tempText.isVisible()) tempIndex++;
+                    else{
+                        chosen[0] = rows.get(tempIndex);
+                        break;
+                    }
+                    if(tempIndex>=rows.size()) tempIndex=0;
+                }
+                if(tempIndex==index) chosen[0] = null;
             }
         });
 
-        //Timeline actualize = new Timeline(new KeyFrame(Duration.millis(10), event -> {
-        //    addHBox.setAlignment(Pos.CENTER);
-        //}));
+        Timeline actualize = new Timeline(new KeyFrame(Duration.millis(10), event -> {
+            title.setLayoutX((scene.getWidth()-title.getWrappingWidth())/2);
+            parts.setLayoutX((scene.getWidth()-parts.getMinWidth())/2);
+            plotButton.setLayoutX((scene.getWidth()-plotButton.getWidth())/2);
+            background.setWidth(scene.getWidth());
+            background.setHeight(scene.getHeight());
+        }));
 
-        //actualize.setCycleCount(-1);
-        //actualize.play();
+        actualize.setCycleCount(-1);
+        actualize.play();
 
         root.getChildren().addAll(background, title, parts, plotButton);
 
         Stage stage = new Stage();
+        stage.setMinWidth(700);
         stage.setScene(scene);
         stage.show();
     }
