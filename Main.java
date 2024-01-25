@@ -29,6 +29,7 @@ public class Main extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception{
+        double gapsBetweenVisuals = 20;
         final boolean[] increased = {false};
         final HBox[] chosen = {null};
         List <TextField> partsList = new ArrayList<>();
@@ -51,7 +52,6 @@ public class Main extends Application {
         ScrollPane parts = new ScrollPane();
         parts.setStyle("-fx-background-color: rgb(169, 169, 169); -fx-background: rgb(169, 169, 169)");
         parts.setMinWidth(202);
-        parts.setLayoutX((scene.getWidth()-parts.getMinWidth())/2-51);
         parts.setLayoutY(300);
         parts.setMaxHeight(400);
 
@@ -264,7 +264,8 @@ public class Main extends Application {
 
         Timeline actualize = new Timeline(new KeyFrame(Duration.millis(10), event -> {
             title.setLayoutX((scene.getWidth()-title.getWrappingWidth())/2);
-            parts.setLayoutX((scene.getWidth()-parts.getMinWidth())/2);
+            if(!increased[0]) parts.setLayoutX((scene.getWidth()-parts.getMinWidth())/2-22);
+            else parts.setLayoutX((scene.getWidth()-parts.getMinWidth())/2+9);
             plotButton.setLayoutX((scene.getWidth()-plotButton.getWidth())/2);
             background.setWidth(scene.getWidth());
             background.setHeight(scene.getHeight());
@@ -277,6 +278,7 @@ public class Main extends Application {
 
         Stage stage = new Stage();
         stage.setMinWidth(700);
+        stage.setMinHeight(parts.getMaxHeight()+400+plotButton.getHeight()+2*gapsBetweenVisuals);
         stage.setScene(scene);
         stage.show();
     }
