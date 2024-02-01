@@ -126,9 +126,10 @@ public class Main extends Application {
             final double[] selectedPartAngle = new double[1];
             final double[] selectedPartExtent = new double[1];
             double total = 0;
-            Color[] colours = {Color.RED, Color.MEDIUMSLATEBLUE, Color.BLUEVIOLET, Color.DARKKHAKI, Color.INDIANRED};
+            List<Color> coloursList = new ArrayList<>();
 
             for (TextField current : partsList) {
+                coloursList.add(Color.rgb((int)(Math.random()*256), (int)(Math.random()*256), (int)(Math.random()*256), 1));
                 String value = current.getText();
                 try {
                     double numericalValue = Double.parseDouble(value);
@@ -147,21 +148,21 @@ public class Main extends Application {
 
             Scene chartScene = new Scene(chartRoot, 600, 600);
 
-            Rectangle chartBackground = new Rectangle(scene.getWidth(), scene.getHeight());
-            chartBackground.setFill(Color.DARKGRAY);
-
-            Canvas chartCanvas = new Canvas(300, 300);
-            chartCanvas.setLayoutX(150);
-            chartCanvas.setLayoutY(150);
+            Canvas chartCanvas = new Canvas(chartScene.getWidth(), chartScene.getHeight());
             GraphicsContext gr = chartCanvas.getGraphicsContext2D();
 
-            chartRoot.getChildren().addAll(chartBackground, chartCanvas);
+            Rectangle infoRectangle = new Rectangle(100, 50, 20, 20);
+            //TODO if the info rectangle will be starting in the right half of the graph, bedzie sie
+            // zaczynal w przedluzeniu kata
+            // else przedluzenie kata bedzie wskazywalo na jego top right wierzcholek
 
-            draw(chartCanvas, gr, percentages, colours, selectedPartIndex[0]);
+            chartRoot.getChildren().addAll(chartCanvas, infoRectangle);
+
+            draw(chartCanvas, gr, percentages, coloursList, selectedPartIndex[0]);
 
             Timeline chartAnimationGrow = new Timeline(new KeyFrame(Duration.millis(10), event1 -> {
                 drawCorrected(percentages, cycleCounter, selectedPartIndex, selectedPartAngle,
-                        selectedPartExtent, colours, chartCanvas, gr);
+                        selectedPartExtent, coloursList, chartCanvas, gr);
                 cycleCounter[0]++;
                 decreasePlay[0] = true;
                 if(cycleCounter[0] > 9) cycleCounter[0] = 9;
@@ -171,7 +172,7 @@ public class Main extends Application {
 
             Timeline chartAnimationDecrease = new Timeline(new KeyFrame(Duration.millis(10), event1 -> {
                 drawCorrected(percentages, cycleCounter, selectedPartIndex, selectedPartAngle,
-                        selectedPartExtent, colours, chartCanvas, gr);
+                        selectedPartExtent, coloursList, chartCanvas, gr);
                 cycleCounter[0]--;
                 if(cycleCounter[0] == 0) decreasePlay[0] = false;
                 if(cycleCounter[0] < 0) cycleCounter[0] = 0;
@@ -179,10 +180,12 @@ public class Main extends Application {
 
             chartAnimationDecrease.setCycleCount(10);
 
+            double width = chartCanvas.getWidth()/2, height = chartCanvas.getHeight()/2;
+
             chartCanvas.setOnMouseMoved(event1 -> {
-                if((event1.getX()-150)*(event1.getX()-150)+(event1.getY()-150)*(event1.getY()-150)<100*100){
-                    double tempAngle = Math.atan(-(event1.getY()-150)/ (event1.getX()-150)), totalPercentages=0;
-                    if(event1.getX()<150) tempAngle+=Math.PI;
+                if((event1.getX()-width)*(event1.getX()-width)+(event1.getY()-height)*(event1.getY()-height)<width*height/4){
+                    double tempAngle = Math.atan(-(event1.getY()-height)/ (event1.getX()-width)), totalPercentages=0;
+                    if(event1.getX()<width) tempAngle+=Math.PI;
                     tempAngle= tempAngle*180/Math.PI-90;
                     if(tempAngle<0) tempAngle+=360;
                     boolean animation = false;
@@ -215,6 +218,7 @@ public class Main extends Application {
             });
 
             Stage chartStage = new Stage();
+            chartStage.setResizable(false);
             chartStage.setScene(chartScene);
             chartStage.show();
         });
@@ -284,28 +288,30 @@ public class Main extends Application {
     }
 
     public void drawCorrected(List<Double> percentages, int[] cycleCounter, int[] selectedPartIndex,
-                              double[] selectedPartAngle, double[] selectedPartExtent, Color[] colours,
+                              double[] selectedPartAngle, double[] selectedPartExtent, List<Color> coloursList,
                               Canvas chartCanvas, GraphicsContext gr) {
-        draw(chartCanvas, gr, percentages, colours, selectedPartIndex[0]);
-        gr.setFill(colours[selectedPartIndex[0]]);
-        gr.fillArc(50- cycleCounter[0], 50- cycleCounter[0], 200+2* cycleCounter[0],
-                200+2* cycleCounter[0], selectedPartAngle[0] + 90,
+        double width = chartCanvas.getWidth()/2, height = chartCanvas.getHeight()/2;
+        draw(chartCanvas, gr, percentages, coloursList, selectedPartIndex[0]);
+        gr.setFill(coloursList.get(selectedPartIndex[0]));
+        gr.fillArc(width/2 - cycleCounter[0], height/2 - cycleCounter[0], width + 2*cycleCounter[0],
+                height + 2*cycleCounter[0], selectedPartAngle[0] + 90,
                 selectedPartExtent[0], ArcType.ROUND);
     }
 
     public static void draw(Canvas chartCanvas, GraphicsContext gr, List<Double> percentages,
-                            Color[] colours, int selectedPartIndex) {
+                            List<Color> colours, int selectedPartIndex) {
         gr.clearRect(0, 0, chartCanvas.getWidth(), chartCanvas.getHeight());
         gr.setFill(Color.PAPAYAWHIP);
         gr.fillRect(0,0, chartCanvas.getWidth(), chartCanvas.getHeight());
 
         double angle = 90;
+        double width = chartCanvas.getWidth()/2, height = chartCanvas.getHeight()/2;
 
         for (int i = 0; i< percentages.size(); i++) {
-            gr.setFill(colours[i]);
+            gr.setFill(colours.get(i));
             gr.beginPath();
             double tempAngle = percentages.get(i) * 360;
-            if(selectedPartIndex!=i) gr.fillArc(50, 50, 200, 200, angle, tempAngle, ArcType.ROUND);
+            if(selectedPartIndex!=i) gr.fillArc(width/2, height/2, width, height, angle, tempAngle, ArcType.ROUND);
             angle += tempAngle;
         }
 
@@ -315,8 +321,8 @@ public class Main extends Application {
             gr.setStroke(Color.PAPAYAWHIP);
             gr.setLineWidth(2);
             gr.beginPath();
-            gr.moveTo(150, 150);
-            gr.lineTo(150+100*Math.cos(angle), 150-100*Math.sin(angle));
+            gr.moveTo(width, height);
+            gr.lineTo(width*(1+Math.cos(angle)), height*(1-Math.sin(angle)));
             gr.stroke();
             double tempAngle = percentage * 2*Math.PI;
             angle +=tempAngle;
